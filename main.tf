@@ -11,11 +11,11 @@ resource "aws_vpc" "devsecops_vpc" {
 }
 
 resource "aws_subnet" "devsecops_subnet" {
-  count = 2
-  vpc_id                  = aws_vpc.devsecops_vpc.id
-  cidr_block              = cidrsubnet(aws_vpc.devsecops_vpc.cidr_block, 4, count.index)
-  availability_zone       = element(["us-east-1a", "us-east-1b"], count.index)
-  map_public_ip_on_launch = true
+  count                    = 2
+  vpc_id                   = aws_vpc.devsecops_vpc.id
+  cidr_block               = cidrsubnet(aws_vpc.devsecops_vpc.cidr_block, 4, count.index)
+  availability_zone        = element(["us-east-1a", "us-east-1b"], count.index)
+  map_public_ip_on_launch  = true
 
   tags = {
     Name = "devsecops-subnet-${count.index}"
@@ -103,9 +103,9 @@ resource "aws_eks_node_group" "devsecops" {
   subnet_ids      = aws_subnet.devsecops_subnet[*].id
 
   scaling_config {
-    desired_size = 3
-    max_size     = 3
-    min_size     = 3
+    desired_size = 2  # Reduced to avoid vCPU limit issue
+    max_size     = 2
+    min_size     = 1
   }
 
   instance_types = ["t2.medium"]
@@ -138,6 +138,11 @@ EOF
 resource "aws_iam_role_policy_attachment" "devsecops_cluster_role_policy" {
   role       = aws_iam_role.devsecops_cluster_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "devsecops_cluster_vpc_policy" {
+  role       = aws_iam_role.devsecops_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
 }
 
 resource "aws_iam_role" "devsecops_node_group_role" {
